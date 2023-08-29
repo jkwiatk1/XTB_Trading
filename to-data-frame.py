@@ -25,7 +25,7 @@ async def main():
                                 item['symbol'],
                                 item['ask'],
                                 item['bid'],
-                                item['description']
+                                item['description'],
                             ],
                             index = my_columns
                         ),
