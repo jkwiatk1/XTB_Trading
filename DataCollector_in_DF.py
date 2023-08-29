@@ -34,8 +34,23 @@ class DataCollector:
                 ignore_index=True
             )
 
+    def divide_chunks(self, lst, n):
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
+
+    def create_symbol_groups(self, chunk_size = 100):
+        self.symbol_groups = list(self.divide_chunks(self.final_dataframe['Ticker'], chunk_size))
+
+    def get_symbol_strings(self):
+        symbol_strings = []
+        for group in self.symbol_groups:
+            symbol_strings.append(','.join(group))
+        return symbol_strings
+
     def get_dataframe(self):
         return self.final_dataframe
+
+
 
 
 async def main():
