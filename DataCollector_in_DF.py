@@ -18,6 +18,7 @@ class DataCollector:
 
     async def collect_data(self):
         response = await self.x.socket.getAllSymbols()
+        self.final_dataframe.drop(index=self.final_dataframe.index, inplace=True)
         for item in response['returnData']:
             self.final_dataframe = self.final_dataframe.append(
                 pd.Series(
@@ -34,6 +35,25 @@ class DataCollector:
                 ignore_index=True
             )
 
+    def save_to_csv(self, filename='docs/data.csv'):
+        if self.final_dataframe.empty:
+            raise ValueError("The data frame is empty. Cannot save to CSV file.")
+        self.final_dataframe.to_csv(filename, index=False)
+
+    def get_symbol_strings(self):
+        if self.final_dataframe.empty:
+            try:
+                self.final_dataframe = pd.read_csv('docs/data.csv')
+                print("Data was loaded from a CSV file.")
+            except FileNotFoundError:
+                print("CSV file not found.")
+                return []
+            # except FileNotFoundError:
+            #     raise FileNotFoundError("CSV file not founddas.")
+
+        symbol_strings = self.final_dataframe['Ticker'].unique().tolist()
+        return symbol_strings
+
     def divide_chunks(self, lst, n):
         for i in range(0, len(lst), n):
             yield lst[i:i + n]
@@ -41,15 +61,17 @@ class DataCollector:
     def create_symbol_groups(self, chunk_size = 100):
         self.symbol_groups = list(self.divide_chunks(self.final_dataframe['Ticker'], chunk_size))
 
-    def get_symbol_strings(self):
-        symbol_strings = []
+    def get_symbol_groups_strings(self):
+        symbol_groups_strings = []
         for group in self.symbol_groups:
-            symbol_strings.append(','.join(group))
-        return symbol_strings
+            symbol_groups_strings.append(','.join(group))
+        return symbol_groups_strings
+
+    def get_column_names(self):
+        return self.my_columns
 
     def get_dataframe(self):
         return self.final_dataframe
-
 
 
 
@@ -62,13 +84,23 @@ async def main():
         await data_collector.connect()
         await data_collector.collect_data()
         df = data_collector.get_dataframe()
+        data_collector.save_to_csv()
         print(df)
+        print()
+        print(data_collector.get_symbol_strings())
+        print()
+        print(len(data_collector.get_symbol_strings()))
+        print()
+        print(data_collector.get_column_names())
 
     except xapi.LoginFailed as e:
         print(f"Log in failed: {e}")
 
     except xapi.ConnectionClosed as e:
         print(f"Connection closed: {e}")
+
+    except ValueError as e:
+        print(f"Error occurred: {e}")
 
 
 if __name__ == "__main__":
