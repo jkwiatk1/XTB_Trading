@@ -5,7 +5,7 @@ import xapi
 
 logging.basicConfig(level=logging.INFO)
 
-with open("credentials.json", "r") as f:
+with open("../credentials.json", "r") as f:
     CREDENTIALS = json.load(f)
 
 # start from the first day of a current year
