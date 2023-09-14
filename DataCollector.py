@@ -10,13 +10,14 @@ class DataCollector:
         self.credentials_file = credentials_file
         self.my_columns = ['Ticker', 'Ask', 'Bid', 'Spread', 'Description', 'Ask/Bid Time']
         self.final_dataframe = pd.DataFrame(columns=self.my_columns)
+        self.x = None
 
     async def connect(self):
         with open(self.credentials_file, "r") as f:
             self.CREDENTIALS = json.load(f)
         self.x = await xapi.connect(**self.CREDENTIALS)
 
-    async def collect_data(self):
+    async def collect_real_data(self):
         response = await self.x.socket.getAllSymbols()
         self.final_dataframe.drop(index=self.final_dataframe.index, inplace=True)
         for item in response['returnData']:
@@ -40,13 +41,16 @@ class DataCollector:
             raise ValueError("The data frame is empty. Cannot save to CSV file.")
         self.final_dataframe.to_csv(filename, index=False)
 
+    def get_socket_object(self):
+        return self.x.socket
+
     def get_symbol_strings(self):
         if self.final_dataframe.empty:
             try:
                 self.final_dataframe = pd.read_csv('docs/data.csv')
-                print("Data was loaded from a CSV file.")
+                print("Data was loaded from a CSV file to get symbols.")
             except FileNotFoundError:
-                print("CSV file not found.")
+                print("CSV file not found to get symbols.")
                 return []
             # except FileNotFoundError:
             #     raise FileNotFoundError("CSV file not founddas.")
@@ -82,7 +86,7 @@ async def main():
 
     try:
         await data_collector.connect()
-        await data_collector.collect_data()
+        await data_collector.collect_real_data()
         df = data_collector.get_dataframe()
         data_collector.save_to_csv()
         print(df)
