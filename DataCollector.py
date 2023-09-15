@@ -17,7 +17,7 @@ class DataCollector:
             self.CREDENTIALS = json.load(f)
         self.x = await xapi.connect(**self.CREDENTIALS)
 
-    async def collect_real_data(self):
+    async def get_real_data(self):
         response = await self.x.socket.getAllSymbols()
         self.final_dataframe.drop(index=self.final_dataframe.index, inplace=True)
         for item in response['returnData']:
@@ -86,7 +86,7 @@ async def main():
 
     try:
         await data_collector.connect()
-        await data_collector.collect_real_data()
+        await data_collector.get_real_data()
         df = data_collector.get_dataframe()
         data_collector.save_to_csv()
         print(df)

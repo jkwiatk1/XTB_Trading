@@ -36,7 +36,7 @@ class HistoricalDataCollector():
         self.possible_symbols = self.dataCollector.get_symbol_strings()
         self.start = start
         self.end = end if end is not None else datetime.now().strftime('%Y-%m-%d')
-        self.cols_to_save =['Date','Open', 'Close', 'High', 'Low']
+        self.cols_to_save =['Date','Open', 'Close', 'High', 'Low', 'Volume']
         self.data = None
         self.api_client = None
         self.max_range = {'PERIOD_M1': 1, 'PERIOD_M5': 1, 'PERIOD_M15': 1, 'PERIOD_M30': 6, 'PERIOD_H1': 6, 'PERIOD_H4': 12}
@@ -83,6 +83,7 @@ class HistoricalDataCollector():
         df['Close'] = df['Open'] + df['close'] / (10 ** digits)
         df['High'] = df['Open'] + df['high'] / (10 ** digits)
         df['Low'] = df['Open'] + df['low'] / (10 ** digits)
+        df['Volume'] = df['vol']
 
         df = df[self.cols_to_save]
         df.set_index("Date", inplace=True, drop=True)
