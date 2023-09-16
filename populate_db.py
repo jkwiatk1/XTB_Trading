@@ -1,7 +1,7 @@
 import logging
 import sqlite3
 import asyncio
-import config
+from my_secrets import config
 
 from DataCollector import DataCollector
 import xapi
@@ -11,13 +11,13 @@ async def main():
 
     logging.basicConfig(level=logging.INFO)
 
-    data_collector = DataCollector("credentials.json")
+    data_collector = DataCollector("my_secrets/credentials.json")
 
     try:
         conn = sqlite3.connect(config.DB_FILE)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute("SELECT symbol, company FROM stock")
+        cursor.execute("SELECT symbol, name FROM stock")
         rows = cursor.fetchall()
         symbols = [row['symbol'] for row in rows]
 
@@ -27,11 +27,11 @@ async def main():
 
         for index, row in df.iterrows():
             symbol = row['Ticker']
-            company = row['Description']
+            name = row['Description']
             try:
                 if symbol not in symbols:
                     print(f"Added a new stock {symbol}")
-                    cursor.execute("INSERT INTO stock (symbol, company) VALUES (?, ?)", (symbol, company))
+                    cursor.execute("INSERT INTO stock (symbol, name) VALUES (?, ?)", (symbol, name))
             except Exception as e:
                 print(symbol)
                 print(e)
