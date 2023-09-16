@@ -1,6 +1,6 @@
-import sqlite3
+import sqlite3, config
 
-connection = sqlite3.connect('trade_app_db.sqlite')
+connection = sqlite3.connect(config.DB_FILE)
 
 cursor = connection.cursor()
 

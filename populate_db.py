@@ -1,21 +1,26 @@
 import logging
 import sqlite3
 import asyncio
+import config
 
 from DataCollector import DataCollector
 import xapi
 
 
 async def main():
-    conn = sqlite3.connect('trade_app_db.sqlite')
-
-    cursor = conn.cursor()
 
     logging.basicConfig(level=logging.INFO)
 
     data_collector = DataCollector("credentials.json")
 
     try:
+        conn = sqlite3.connect(config.DB_FILE)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT symbol, company FROM stock")
+        rows = cursor.fetchall()
+        symbols = [row['symbol'] for row in rows]
+
         await data_collector.connect()
         await data_collector.get_real_data()
         df = data_collector.get_dataframe()
@@ -24,7 +29,9 @@ async def main():
             symbol = row['Ticker']
             company = row['Description']
             try:
-                cursor.execute("INSERT INTO stock (symbol, company) VALUES (?, ?)", (symbol, company))
+                if symbol not in symbols:
+                    print(f"Added a new stock {symbol}")
+                    cursor.execute("INSERT INTO stock (symbol, company) VALUES (?, ?)", (symbol, company))
             except Exception as e:
                 print(symbol)
                 print(e)
@@ -38,8 +45,6 @@ async def main():
 
     except ValueError as e:
         print(f"Error occurred: {e}")
-
-
 
 
 if __name__ == "__main__":
