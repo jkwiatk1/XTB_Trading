@@ -1,4 +1,5 @@
-import sqlite3, config
+import sqlite3
+from my_secrets import config
 
 connection = sqlite3.connect(config.DB_FILE)
 
@@ -8,12 +9,12 @@ cursor.execute("""
     CREATE TABLE IF NOT EXISTS stock (
     id INTEGER PRIMARY KEY,
     symbol TEXT NOT NULL UNIQUE,
-    company TEXT NOT NULL
+    name TEXT NOT NULL
     )
 """)
 
 cursor.execute("""
-    CREATE TABLE IF NOT EXISTS stock_price (
+    CREATE TABLE IF NOT EXISTS stock_price_1d (
         id INTEGER PRIMARY KEY ,
         stock_id INTEGER,
         date DATE  NOT NULL,
