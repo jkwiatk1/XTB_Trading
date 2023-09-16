@@ -37,7 +37,6 @@ class HistoricalDataCollector():
         self.start = start
         self.end = end if end is not None else datetime.now().strftime('%Y-%m-%d')
         self.cols_to_save =['Date','Open', 'Close', 'High', 'Low', 'Volume']
-        self.data = None
         self.api_client = None
         self.max_range = {'PERIOD_M1': 1, 'PERIOD_M5': 1, 'PERIOD_M15': 1, 'PERIOD_M30': 6, 'PERIOD_H1': 6, 'PERIOD_H4': 12}
         self.period = period
@@ -67,7 +66,6 @@ class HistoricalDataCollector():
 
         history_data = await self.api_client.getChartRangeRequest(symbol= self.symbol, start = start, end = end, period= self.period, ticks= 0)
         df = self.history_converter(history_data)
-        self.data = df
         return  df
 
     def history_converter(self, history):
@@ -118,10 +116,10 @@ async def main():
     logging.basicConfig(level=logging.INFO)
     hist_obj = HistoricalDataCollector(
         symbol='EURUSD',
-        start='2023-01-01',
+        start='2000-01-01',
         end='2023-08-01',
         period=PeriodCode.PERIOD_D1,
-        credentials_file='credentials.json'
+        credentials_file='my_secrets/credentials.json'
     )
     try:
         response = await hist_obj.run()

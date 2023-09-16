@@ -82,7 +82,7 @@ class DataCollector:
 async def main():
     logging.basicConfig(level=logging.INFO)
 
-    data_collector = DataCollector("credentials.json")
+    data_collector = DataCollector("my_secrets/credentials.json")
 
     try:
         await data_collector.connect()
