@@ -14,12 +14,11 @@ async def main():
     try:
         conn = sqlite3.connect(config.DB_FILE)
         cursor = conn.cursor()
-        cursor.execute("SELECT symbol FROM stock")
-        rows = cursor.fetchall()
+        cursor.execute("SELECT id, symbol FROM stock")
+        symbols = cursor.fetchall()
 
-        for row in rows:
-            symbol = row[0]
-            print(symbol)
+        for stock_id, symbol in symbols:
+            print(f"Processing symbol: {symbol}")
             hist_data_collector = HistoricalDataCollector(
                 symbol = symbol,
                 start ='2000-01-01',
@@ -30,14 +29,17 @@ async def main():
 
             hist_data_df = await hist_data_collector.run()
 
-            for index,row in hist_data_df.iterrows():
-                pass #TODO read data in chunks size
-                # cursor.execute("""
-                #     INSERT INTO stock_price_1d
-                # """)
+            for date_index, row in hist_data_df.iterrows():
+                cursor.execute("""
+                    INSERT INTO stock_price_1d (stock_id, date, open, close, high, low, volume)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, [stock_id, date_index.strftime('%Y-%m-%d %H:%M:%S'), row['Open'], row['Close'], row['High'], row['Low'], row['Volume']])
 
             del hist_data_collector
             gc.collect()
+
+        conn.commit()
+        conn.close()
 
     except xapi.LoginFailed as e:
         print(f"Log in failed: {e}")
