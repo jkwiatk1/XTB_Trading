@@ -1,6 +1,5 @@
 import logging
 import asyncio
-import json
 import xapi
 import pandas as pd
 from ApiConnection import ApiConnection
@@ -15,11 +14,13 @@ class DataCollector:
                 file with xtb credentials
 
     cols_to_save - list
-                list of columns to save, names taken from DataCollector class
+                list of columns to save
+
+    data - dataframe
+                dataframe with real time data, columns = cols_to_save
 
     '''
     def __init__(self, credentials_file):
-        self.credentials_file = credentials_file
         self.cols_to_save = ['Ticker', 'Ask', 'Bid', 'Spread', 'Description', 'Ask/Bid Time']
         self.data = pd.DataFrame(columns=self.cols_to_save)
 
@@ -32,7 +33,7 @@ class DataCollector:
     def disconnect_from_xapi(self):
         asyncio.run(self.api_connection.disconnect())
 
-    async def get_real_data(self):
+    async def download_real_data(self):
         response = await self.api_client.socket.getAllSymbols()
         self.data.drop(index=self.data.index, inplace=True)
         for item in response['returnData']:
@@ -50,6 +51,7 @@ class DataCollector:
                 ),
                 ignore_index=True
             )
+        return self.data
 
     def save_to_csv(self, filename='docs/data.csv'):
         if self.data.empty:
@@ -96,7 +98,7 @@ async def main():
 
     try:
         await data_collector.connect_to_xapi()
-        await data_collector.get_real_data()
+        await data_collector.download_real_data()
         df = data_collector.get_data_df()
         data_collector.save_to_csv()
         print(df)
