@@ -21,9 +21,9 @@ async def main():
         rows = cursor.fetchall()
         symbols = [row['symbol'] for row in rows]
 
-        await data_collector.connect()
+        await data_collector.connect_to_xapi()
         await data_collector.get_real_data()
-        df = data_collector.get_dataframe()
+        df = data_collector.get_data_df()
 
         for index, row in df.iterrows():
             symbol = row['Ticker']
