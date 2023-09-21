@@ -34,7 +34,8 @@ async def main():
                     credentials_file = "my_secrets/credentials.json"
                 )
 
-                hist_data_df = await hist_data_collector.run()
+                await hist_data_collector.connect_to_xapi()
+                hist_data_df = await hist_data_collector.download_history_data()
 
                 for date_index, row in hist_data_df.iterrows():
                     cursor.execute("""

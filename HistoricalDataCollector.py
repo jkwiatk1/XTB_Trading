@@ -1,13 +1,15 @@
 import pandas as pd
-from datetime import datetime
-from dateutil.relativedelta import *
-from xapi.enums import PeriodCode
-from DataCollector import  DataCollector
 import logging
 import xapi
 import asyncio
 
-class HistoricalDataCollector():
+from datetime import datetime
+from dateutil.relativedelta import *
+from xapi.enums import PeriodCode
+from ApiConnection import  ApiConnection
+
+
+class HistoricalDataCollector:
 
     ''' Class for collection historical data from XTB
 
@@ -31,30 +33,28 @@ class HistoricalDataCollector():
 
     '''
     def __init__(self, symbol, start, credentials_file, end=None, period = PeriodCode.PERIOD_MN1):
-        self.dataCollector = DataCollector(credentials_file)
+        self.api_connection = ApiConnection(credentials_file)
+        self.api_client = None
+
+        self.cols_to_save =['Date','Open', 'Close', 'High', 'Low', 'Volume']
         self.symbol = symbol
-        self.possible_symbols = self.dataCollector.get_symbol_strings()
         self.start = start
         self.end = end if end is not None else datetime.now().strftime('%Y-%m-%d')
-        self.cols_to_save =['Date','Open', 'Close', 'High', 'Low', 'Volume']
-        self.api_client = None
         self.max_range = {'PERIOD_M1': 1, 'PERIOD_M5': 1, 'PERIOD_M15': 1, 'PERIOD_M30': 6, 'PERIOD_H1': 6, 'PERIOD_H4': 12}
         self.period = period
         self.check_max_range()
 
-    async def run(self):
-        await self.dataCollector.connect()
-        self.api_client = self.dataCollector.get_socket_object()
-        return await self.get_history_data()
+    async def connect_to_xapi(self):
+        self.api_client = await self.api_connection.connect()
+
+    def disconnect_from_xapi(self):
+        asyncio.run(self.api_connection.disconnect())
 
     def __repr__(self):
         rep = "DataCollector(symbol = {}, start = {}, end = {}, period= {})"
         return rep.format(self.symbol, self.start, self.end, self.period)
 
-    def possible_symbols(self):
-        return self.possible_symbols
-
-    async def get_history_data(self):
+    async def download_history_data(self):
         ''' Collect and prepares the data'''
 
         self.check_max_range()
@@ -64,9 +64,10 @@ class HistoricalDataCollector():
         start_date = datetime.strptime(self.start, '%Y-%m-%d')
         start = int(datetime.timestamp(start_date) * 1000)
 
-        history_data = await self.api_client.getChartRangeRequest(symbol= self.symbol, start = start, end = end, period= self.period, ticks= 0)
+        history_data = await self.api_client.socket.getChartRangeRequest(symbol= self.symbol, start = start, end = end, period= self.period, ticks= 0)
         df = self.history_converter(history_data)
         return  df
+
 
     def history_converter(self, history):
         '''Convert data from dict to pandas df'''
@@ -85,7 +86,6 @@ class HistoricalDataCollector():
 
         df = df[self.cols_to_save]
         df.set_index("Date", inplace=True, drop=True)
-
 
         return df
 
@@ -107,10 +107,11 @@ class HistoricalDataCollector():
                     self.end = datetime.now().strftime('%Y-%m-%d')
                     print(f"End date is set to {self.end}")
 
-
                 self.start = date_start.strftime('%Y-%m-%d')
                 print(f"Start date is set to {self.start}")
 
+    def get_column_names(self):
+        return self.cols_to_save
 
 async def main():
     logging.basicConfig(level=logging.INFO)
@@ -122,7 +123,8 @@ async def main():
         credentials_file='my_secrets/credentials.json'
     )
     try:
-        response = await hist_obj.run()
+        await hist_obj.connect_to_xapi()
+        response = await hist_obj.download_history_data()
         print(response)
         print()
 
