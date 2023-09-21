@@ -37,7 +37,7 @@ class ApiConnection:
 
 async def main():
     logging.basicConfig(level=logging.INFO)
-    my_connection = ApiConnection("my_secrets/credentials.json")
+    my_connection = ApiConnection("../my_secrets/credentials.json")
 
     try:
         await my_connection.connect()

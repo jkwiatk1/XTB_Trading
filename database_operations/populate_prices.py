@@ -4,7 +4,7 @@ import gc
 import sqlite3
 import xapi
 
-from HistoricalDataCollector import HistoricalDataCollector
+from scripts.HistoricalDataCollector import HistoricalDataCollector
 from my_secrets import config
 from xapi.enums import PeriodCode
 
@@ -31,7 +31,7 @@ async def main():
                     start ='2000-01-01',
                     end ='2023-08-01',
                     period = PeriodCode.PERIOD_D1,
-                    credentials_file = "my_secrets/credentials.json"
+                    credentials_file ="../my_secrets/credentials.json"
                 )
 
                 await hist_data_collector.connect_to_xapi()

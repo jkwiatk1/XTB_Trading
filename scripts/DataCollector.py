@@ -2,7 +2,7 @@ import logging
 import asyncio
 import xapi
 import pandas as pd
-from ApiConnection import ApiConnection
+from scripts.ApiConnection import ApiConnection
 
 
 class DataCollector:
@@ -53,7 +53,7 @@ class DataCollector:
             )
         return self.data
 
-    def save_to_csv(self, filename='docs/data.csv'):
+    def save_to_csv(self, filename='../docs/data.csv'):
         if self.data.empty:
             raise ValueError("The data frame is empty. Cannot save to CSV file.")
         self.data.to_csv(filename, index=False)
@@ -61,7 +61,7 @@ class DataCollector:
     def get_symbol_strings(self):
         if self.data.empty:
             try:
-                self.data = pd.read_csv('docs/data.csv')
+                self.data = pd.read_csv('../docs/data.csv')
                 print("Data was loaded from a CSV file to get symbols.")
             except FileNotFoundError:
                 print("CSV file not found to get symbols.")
@@ -94,7 +94,7 @@ class DataCollector:
 async def main():
     logging.basicConfig(level=logging.INFO)
 
-    data_collector = DataCollector("my_secrets/credentials.json")
+    data_collector = DataCollector("../my_secrets/credentials.json")
 
     try:
         await data_collector.connect_to_xapi()
