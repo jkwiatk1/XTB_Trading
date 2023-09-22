@@ -3,6 +3,7 @@ import asyncio
 import xapi
 import pandas as pd
 from scripts.ApiConnection import ApiConnection
+from my_secrets import config
 
 
 class DataCollector:
@@ -94,7 +95,7 @@ class DataCollector:
 async def main():
     logging.basicConfig(level=logging.INFO)
 
-    data_collector = DataCollector("../my_secrets/credentials.json")
+    data_collector = DataCollector(config.CREDENTIALS_PATH)
 
     try:
         await data_collector.connect_to_xapi()

@@ -2,6 +2,7 @@ import logging
 import asyncio
 import json
 import xapi
+from my_secrets import config
 
 
 class ApiConnection:
@@ -37,7 +38,7 @@ class ApiConnection:
 
 async def main():
     logging.basicConfig(level=logging.INFO)
-    my_connection = ApiConnection("../my_secrets/credentials.json")
+    my_connection = ApiConnection(config.CREDENTIALS_PATH)
 
     try:
         await my_connection.connect()
