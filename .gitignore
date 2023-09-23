@@ -2,7 +2,8 @@
 build
 dist
 idea
-credentials.json
+my_secrets/credentials.json
+my_secrets/config.py
 __pycache__
 .pytest_cache
 .coverage
