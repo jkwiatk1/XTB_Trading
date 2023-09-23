@@ -9,29 +9,35 @@ class DatabaseConnector:
         self.DB_FILE = sql_database_file_path
         self.__conn = None
         self.__cursor = None
+        self.__connected = False
 
     async def connect_to_db(self, ROW_FACTORY = True):
         try:
             self.__conn = sqlite3.connect(self.DB_FILE)
+            self.__connected = True
             print("Connected to db.")
             if ROW_FACTORY:
                 self.__conn.row_factory = sqlite3.Row
                 print("Set row factory.")
             self.__cursor = self.__conn.cursor()
         except sqlite3.Error as e:
-            raise DatabaseConnectionError(f"Error connecting to the database: {e}")
+            error = f"Error connecting to the database: {e}"
+            raise DatabaseConnectionError(error)
     async def close_db_connection(self):
         try:
             if self.__conn:
                 self.__conn.close()
+                self.__connected = False
                 print("Disconnected from db.")
         except sqlite3.Error as e:
-            raise DatabaseConnectionError(f"Error closing the database connection: {e}")
+            error = f"Error closing the database connection: {e}"
+            raise DatabaseConnectionError(error)
 
     def __del__(self):
         if self.__conn:
             self.__conn.close()
-            print("Disconnected from the db due to deletion of the DatabaseConnector object.")
+            self.__connected = False
+            print("Disconnected from db due to deletion of the DatabaseConnector object.")
 
     async def execute_query(self, query: str, params: Optional[tuple] = None):
         try:
@@ -42,20 +48,24 @@ class DatabaseConnector:
             self.__conn.commit()
         except sqlite3.Error as e:
             self.__conn.rollback()
-            raise DatabaseConnectionError(f"Database error while executing query: {e}")
+            error = f"Database error while executing query: {e}"
+            raise DatabaseConnectionError(error)
 
     async def fetch_data(self, query, params=None):
         try:
             await self.execute_query(query, params)
             return self.__cursor.fetchall()
         except sqlite3.Error as e:
-            raise DatabaseConnectionError(f"Database error while executing query (fetching data): {e}")
+            error = f"Database error while executing query (fetching data): {e}"
+            raise DatabaseConnectionError(error)
 
-    async def fetch_one(self):
+    async def fetch_one(self, query, params=None):
         try:
+            await self.execute_query(query, params)
             return self.__cursor.fetchone()
         except sqlite3.Error as e:
-            raise DatabaseConnectionError(f"Database error while executing query (fetch data): {e}")
+            error = f"Database error while executing query (fetch data): {e}"
+            raise DatabaseConnectionError(error)
 
     async def drop_table(self, table_name):
         query = f"DROP TABLE IF EXISTS {table_name}"
@@ -72,3 +82,6 @@ class DatabaseConnector:
 
     async def get_cursor(self):
         return self.__cursor
+
+    async def get_conn_status(self):
+        return self.__connected

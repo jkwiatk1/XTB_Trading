@@ -31,7 +31,7 @@ async def main():
                     start ='2000-01-01',
                     end ='2023-08-01',
                     period = PeriodCode.PERIOD_D1,
-                    credentials_file ="../my_secrets/credentials.json"
+                    credentials_file =config.CREDENTIALS_PATH
                 )
 
                 await hist_data_collector.connect_to_xapi()

@@ -11,7 +11,7 @@ async def main():
 
     logging.basicConfig(level=logging.INFO)
 
-    data_collector = DataCollector("../my_secrets/credentials.json")
+    data_collector = DataCollector(config.CREDENTIALS_PATH)
 
     try:
         conn = sqlite3.connect(config.DB_FILE)

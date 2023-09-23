@@ -33,7 +33,7 @@ class HistoricalDataCollector:
                 list of columns to save, names taken from DataCollector class
 
     '''
-    def __init__(self, symbol, start, credentials_file, end=None, period = PeriodCode.PERIOD_MN1):
+    def __init__(self, symbol, start, credentials_file, end=None, period: PeriodCode = PeriodCode.PERIOD_MN1):
         self.api_connection = ApiConnection(credentials_file)
         self.api_client = None
 
