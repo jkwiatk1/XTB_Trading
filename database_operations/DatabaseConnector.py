@@ -2,6 +2,7 @@ import sqlite3
 from typing import Optional
 from xapi.exceptions import DatabaseConnectionError
 
+ROW_FACTORY = True
 
 class DatabaseConnector:
     def __init__(self, sql_database_file_path: str):
@@ -9,11 +10,13 @@ class DatabaseConnector:
         self.__conn = None
         self.__cursor = None
 
-    async def connect_to_db(self, row_factor = True):
+    async def connect_to_db(self, ROW_FACTORY = True):
         try:
             self.__conn = sqlite3.connect(self.DB_FILE)
-            if row_factor == True:
+            print("Connected to db.")
+            if ROW_FACTORY:
                 self.__conn.row_factory = sqlite3.Row
+                print("Set row factory.")
             self.__cursor = self.__conn.cursor()
         except sqlite3.Error as e:
             raise DatabaseConnectionError(f"Error connecting to the database: {e}")
@@ -21,8 +24,14 @@ class DatabaseConnector:
         try:
             if self.__conn:
                 self.__conn.close()
+                print("Disconnected from db.")
         except sqlite3.Error as e:
             raise DatabaseConnectionError(f"Error closing the database connection: {e}")
+
+    def __del__(self):
+        if self.__conn:
+            self.__conn.close()
+            print("Disconnected from the db due to deletion of the DatabaseConnector object.")
 
     async def execute_query(self, query: str, params: Optional[tuple] = None):
         try:
@@ -41,6 +50,12 @@ class DatabaseConnector:
             return self.__cursor.fetchall()
         except sqlite3.Error as e:
             raise DatabaseConnectionError(f"Database error while executing query (fetching data): {e}")
+
+    async def fetch_one(self):
+        try:
+            return self.__cursor.fetchone()
+        except sqlite3.Error as e:
+            raise DatabaseConnectionError(f"Database error while executing query (fetch data): {e}")
 
     async def drop_table(self, table_name):
         query = f"DROP TABLE IF EXISTS {table_name}"

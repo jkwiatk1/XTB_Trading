@@ -25,10 +25,12 @@ class ApiConnection:
         with open(self.credentials_file, "r") as f:
             self.CREDENTIALS = json.load(f)
         self.ws_client = await xapi.connect(**self.CREDENTIALS)
+        print("Connected to API.")
         return self.ws_client
 
     async def disconnect(self):
         await self.ws_client.disconnect()
+        print("Disconnected from API.")
 
     def get_websocket_object(self):
         return self.ws_client
