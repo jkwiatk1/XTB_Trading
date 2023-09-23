@@ -1,7 +1,7 @@
 import logging
 from xapi import PeriodCode
 import logging
-import sqlite3
+import gc
 import asyncio
 import xapi
 
@@ -15,11 +15,8 @@ from scripts.HistoricalDataCollector import HistoricalDataCollector
 
 class DatabaseManager:
     def __init__(self, sql_database_file_path):
-        self.stock_id = None
-        self.symbol = None
         self.connector = DatabaseConnector(sql_database_file_path)
-        self.credentials = config.CREDENTIALS_PATH
-
+        self.connection_status = False
     async def connect_to_db(self):
         try:
             await self.connector.connect_to_db()
@@ -38,21 +35,23 @@ class DatabaseManager:
         except DatabaseConnectionError as e:
             print(f"Database symbols error: {e}")
 
-    async def populate_db(self, table_name):
-        logging.basicConfig(level=logging.INFO)
+    async def populate_db(self, table_name: str, data_collector: DataCollector):
         query = f"SELECT symbol, name FROM {table_name}"
         query_insert = f"INSERT INTO {table_name} (symbol, name) VALUES (?, ?)"
 
         try:
-            data_collector = DataCollector(self.credentials)
             cursor = await self.connector.get_cursor()
-            if not cursor:
+            self.connection_status = await self.connector.get_conn_status()
+            if not cursor or not self.connection_status:
                 await self.connect_to_db()
 
             rows = await self.connector.fetch_data(query)
             symbols = [row['symbol'] for row in rows]
 
-            await data_collector.connect_to_xapi()
+            data_collector = data_collector
+            if not data_collector:
+                await data_collector.connect_to_xapi()
+
             await data_collector.download_real_data()
             df = data_collector.get_data_df()
 
@@ -68,51 +67,40 @@ class DatabaseManager:
                     print(symbol)
                     print(f"Error:  {e}")
 
-        except xapi.LoginFailed as e:
-            print(f"Log in failed: {e}")
-
-        except xapi.ConnectionClosed as e:
-            print(f"Connection closed: {e}")
-
         except ValueError as e:
             print(f"Error occurred: {e}")
 
         finally:
             await self.disconnect_from_db()
 
-    # async def populate_prices(self, stock_id, symbol):
+    # TODO create methods to populate_prices according to populate_db
+    # async def populate_prices(self, table_name, hist_data_collector, stock_id, symbol, period: PeriodCode = PeriodCode.PERIOD_D1):
+    #     query = f"SELECT COUNT(*) FROM {table_name} WHERE stock_id = ?"
+    #     params = (stock_id,)
+    #     query_insert = f"INSERT INTO {table_name} (stock_id, date, open, close, high, low, volume) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    #
     #     try:
-    #         if not self.conn or not self.cursor:
+    #         cursor = await self.connector.get_cursor()
+    #         self.connection_status = await self.connector.get_conn_status()
+    #         if not cursor or not self.connection_status:
     #             await self.connect_to_db()
     #
-    #         self.cursor.execute("SELECT COUNT(*) FROM stock_price_1d WHERE stock_id = ?", (self.stock_id,))
-    #         count = self.cursor.fetchone()[0]
+    #         await self.connector.execute_query(query, params)
+    #         count = await self.connector.fetch_one("SELECT column1, column2 FROM my_table WHERE condition=?", (param_value,))[0]
     #
     #         if count == 0:
-    #             hist_data_collector = HistoricalDataCollector(
-    #                 symbol=self.symbol,
-    #                 start='2000-01-01',
-    #                 end='2023-08-01',
-    #                 period=PeriodCode.PERIOD_D1,
-    #                 credentials_file=config.CREDENTIALS_PATH
-    #             )
-    #
-    #             await hist_data_collector.connect_to_xapi()
     #             hist_data_df = await hist_data_collector.download_history_data()
     #
     #             for date_index, row in hist_data_df.iterrows():
-    #                 self.cursor.execute("""
-    #                     INSERT INTO stock_price_1d (stock_id, date, open, close, high, low, volume)
-    #                     VALUES (?, ?, ?, ?, ?, ?, ?)
-    #                 """, [self.stock_id, date_index.strftime('%Y-%m-%d %H:%M:%S'), row['Open'], row['Close'], row['High'], row['Low'], row['Volume']])
+    #                 params_insert = (stock_id, date_index.strftime('%Y-%m-%d %H:%M:%S'), row['Open'], row['Close'], row['High'], row['Low'], row['Volume'])
+    #                 await self.connector.execute_query(query_insert, params_insert)
     #
-    #             await hist_data_collector.disconnect_from_xapi()
+    #             del hist_data_collector
+    #             gc.collect()
     #
-    #     except xapi.LoginFailed as e:
-    #         print(f"Log in failed: {e}")
+    #         else:
+    #             print(f"Data for: {symbol} already exist in the database.")
     #
-    #     except xapi.ConnectionClosed as e:
-    #         print(f"Connection closed: {e}")
     #
     #     except ValueError as e:
     #         print(f"Error occurred: {e}")
@@ -120,12 +108,53 @@ class DatabaseManager:
     #     finally:
     #         await self.disconnect_from_db()
 
+    async def get_data(self, table: str, params_to_get = None):
+        cursor = await self.connector.get_cursor()
+        self.connection_status = await self.connector.get_conn_status()
+        if not cursor or not self.connection_status:
+            await self.connect_to_db()
+
+        if not params_to_get:
+            query = f"SELECT * FROM {table}"
+        else:
+            placeholders = ",".join(param for param in params_to_get)
+            query = f"SELECT {placeholders} FROM {table}"
+
+        return await self.connector.fetch_data(query)
+
 
 
 async def main():
+    logging.basicConfig(level=logging.INFO)
+
+
+
     try:
+        data_collector = DataCollector(config.CREDENTIALS_PATH)
+        await data_collector.connect_to_xapi()
+
         database_conn = DatabaseManager(config.DB_FILE)
-        await database_conn.populate_db("stock")
+        await database_conn.populate_db("stock", data_collector)
+
+        existing_symbols  = await database_conn.get_data("stock", ("id","symbol"))
+        iterations_num = 0
+
+        for stock_id, symbol in existing_symbols:
+            iterations_num += 1
+            print(f"{iterations_num}. Processing symbol: {symbol}")
+
+
+        # symbol = "EURUSD"
+        # hist_data_collector = HistoricalDataCollector(
+        #     symbol= symbol,
+        #     start='2000-01-01',
+        #     end='2023-08-01',
+        #     period=PeriodCode.PERIOD_D1,
+        #     credentials_file=config.CREDENTIALS_PATH
+        # )
+        # await hist_data_collector.connect_to_xapi()
+        #
+        # await database_conn.populate_db(hist_data_collector,)
 
 
         # existing_symbols = await database_conn.get_symbols()
@@ -138,10 +167,17 @@ async def main():
         #     stock_data_collector = DatabaseManager(config.CREDENTIALS_PATH)
         #     await stock_data_collector.populate_db()
 
-        await database_conn.disconnect_from_db()
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
+
+
+    except xapi.LoginFailed as e:
+        print(f"Log in failed: {e}")
+
+    except xapi.ConnectionClosed as e:
+        print(f"Connection closed: {e}")
+
+    except ValueError as e:
+        print(f"Error occurred: {e}")
 
 
 if __name__ == "__main__":
