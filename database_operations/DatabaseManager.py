@@ -1,15 +1,16 @@
 import logging
-from xapi import PeriodCode
-import logging
 import gc
 import asyncio
 import xapi
 
+from typing import Optional
+from xapi import PeriodCode
 from my_secrets import config
 from DatabaseConnector import DatabaseConnector
 from xapi.exceptions import DatabaseConnectionError
 from scripts.DataCollector import DataCollector
 from scripts.HistoricalDataCollector import HistoricalDataCollector
+
 
 
 
@@ -73,52 +74,67 @@ class DatabaseManager:
         finally:
             await self.disconnect_from_db()
 
-    # TODO create methods to populate_prices according to populate_db
-    # async def populate_prices(self, table_name, hist_data_collector, stock_id, symbol, period: PeriodCode = PeriodCode.PERIOD_D1):
-    #     query = f"SELECT COUNT(*) FROM {table_name} WHERE stock_id = ?"
-    #     params = (stock_id,)
-    #     query_insert = f"INSERT INTO {table_name} (stock_id, date, open, close, high, low, volume) VALUES (?, ?, ?, ?, ?, ?, ?)"
-    #
-    #     try:
-    #         cursor = await self.connector.get_cursor()
-    #         self.connection_status = await self.connector.get_conn_status()
-    #         if not cursor or not self.connection_status:
-    #             await self.connect_to_db()
-    #
-    #         await self.connector.execute_query(query, params)
-    #         count = await self.connector.fetch_one("SELECT column1, column2 FROM my_table WHERE condition=?", (param_value,))[0]
-    #
-    #         if count == 0:
-    #             hist_data_df = await hist_data_collector.download_history_data()
-    #
-    #             for date_index, row in hist_data_df.iterrows():
-    #                 params_insert = (stock_id, date_index.strftime('%Y-%m-%d %H:%M:%S'), row['Open'], row['Close'], row['High'], row['Low'], row['Volume'])
-    #                 await self.connector.execute_query(query_insert, params_insert)
-    #
-    #             del hist_data_collector
-    #             gc.collect()
-    #
-    #         else:
-    #             print(f"Data for: {symbol} already exist in the database.")
-    #
-    #
-    #     except ValueError as e:
-    #         print(f"Error occurred: {e}")
-    #
-    #     finally:
-    #         await self.disconnect_from_db()
+    async def populate_prices(self, table_name: str, stock_id, symbol, hist_data_collector: HistoricalDataCollector):
+        query = f"SELECT COUNT(*) FROM {table_name} WHERE stock_id = ?"
+        params = (stock_id,)
+        query_insert = f"INSERT INTO {table_name} (stock_id, date, open, close, high, low, volume) VALUES (?, ?, ?, ?, ?, ?, ?)"
 
-    async def get_data(self, table: str, params_to_get = None):
+        try:
+            cursor = await self.connector.get_cursor()
+            self.connection_status = await self.connector.get_conn_status()
+            if not cursor or not self.connection_status:
+                await self.connect_to_db()
+
+            await self.connector.execute_query(query,params)
+            count = await self.connector.fetch_one("SELECT COUNT(*) FROM stock_price_1d WHERE stock_id=?",params)
+
+            if count[0] == 0:
+                hist_data_df = await hist_data_collector.download_history_data()
+
+                for date_index, row in hist_data_df.iterrows():
+                    params_insert = (stock_id, date_index.strftime('%Y-%m-%d %H:%M:%S'), row['Open'], row['Close'], row['High'], row['Low'], row['Volume'])
+                    await self.connector.execute_query(query_insert, params_insert)
+                print(f"Data for symbol: {symbol} just added to the database.")
+
+            else:
+                print(f"Data for symbol: {symbol} already exist in the database.")
+
+
+        except ValueError as e:
+            print(f"Error occurred: {e}")
+
+        finally:
+            await self.disconnect_from_db()
+
+    async def get_specify_data(self, table_name: str, columns: list[str], conditions: str = "", params: Optional[tuple] = None):
+        try:
+            cursor = await self.connector.get_cursor()
+            self.connection_status = await self.connector.get_conn_status()
+            if not cursor or not self.connection_status:
+                await self.connect_to_db()
+
+            if conditions == "":
+                query = f"SELECT {', '.join(columns)} FROM {table_name}"
+            else:
+                query = f"SELECT {', '.join(columns)} FROM {table_name} WHERE {conditions}"
+
+            return await self.connector.fetch_data(query, params)
+
+        except Exception as e:
+            error = f"Specify data method error: {e}"
+            print(error)
+
+    async def get_whole_data(self, table_name: str, params_to_get = None):
         cursor = await self.connector.get_cursor()
         self.connection_status = await self.connector.get_conn_status()
         if not cursor or not self.connection_status:
             await self.connect_to_db()
 
         if not params_to_get:
-            query = f"SELECT * FROM {table}"
+            query = f"SELECT * FROM {table_name}"
         else:
             placeholders = ",".join(param for param in params_to_get)
-            query = f"SELECT {placeholders} FROM {table}"
+            query = f"SELECT {placeholders} FROM {table_name}"
 
         return await self.connector.fetch_data(query)
 
@@ -127,24 +143,18 @@ class DatabaseManager:
 async def main():
     logging.basicConfig(level=logging.INFO)
 
-
-
     try:
+        database_conn = DatabaseManager(config.DB_FILE)
+
         data_collector = DataCollector(config.CREDENTIALS_PATH)
         await data_collector.connect_to_xapi()
 
-        database_conn = DatabaseManager(config.DB_FILE)
         await database_conn.populate_db("stock", data_collector)
 
-        existing_symbols  = await database_conn.get_data("stock", ("id","symbol"))
-        iterations_num = 0
-
-        for stock_id, symbol in existing_symbols:
-            iterations_num += 1
-            print(f"{iterations_num}. Processing symbol: {symbol}")
-
-
         # symbol = "EURUSD"
+        # symbol_id  = await database_conn.get_specify_data("stock",["id"], f"symbol = ?",(symbol,))
+        # symbol_id = symbol_id[0][0]
+        #
         # hist_data_collector = HistoricalDataCollector(
         #     symbol= symbol,
         #     start='2000-01-01',
@@ -153,21 +163,30 @@ async def main():
         #     credentials_file=config.CREDENTIALS_PATH
         # )
         # await hist_data_collector.connect_to_xapi()
-        #
-        # await database_conn.populate_db(hist_data_collector,)
+        # await database_conn.populate_prices("stock_price_1d", symbol_id, symbol, hist_data_collector)
 
 
-        # existing_symbols = await database_conn.get_symbols()
-        # iterations_num = 0
+        existing_symbols  = await database_conn.get_whole_data("stock", ("id","symbol"))
+        iterations_num = 0
 
-        # for stock_id, symbol in existing_symbols:
-        #     iterations_num += 1
-        #     print(f"{iterations_num}. Processing symbol: {symbol}")
-        #
-        #     stock_data_collector = DatabaseManager(config.CREDENTIALS_PATH)
-        #     await stock_data_collector.populate_db()
+        for stock_id, symbol in existing_symbols:
+            iterations_num += 1
+            print(f"{iterations_num}. Processing symbol: {symbol}")
 
+            hist_data_collector = HistoricalDataCollector(
+                symbol= symbol,
+                start='2000-01-01',
+                end='2023-08-01',
+                period=PeriodCode.PERIOD_D1,
+                credentials_file=config.CREDENTIALS_PATH
+            )
+            await hist_data_collector.connect_to_xapi()
 
+            await database_conn.populate_prices("stock_price_1d", stock_id, symbol, hist_data_collector)
+
+            await hist_data_collector.close()
+            del hist_data_collector
+            gc.collect()
 
 
     except xapi.LoginFailed as e:

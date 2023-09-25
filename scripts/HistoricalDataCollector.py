@@ -48,8 +48,13 @@ class HistoricalDataCollector:
     async def connect_to_xapi(self):
         self.api_client = await self.api_connection.connect()
 
-    def disconnect_from_xapi(self):
-        asyncio.run(self.api_connection.disconnect())
+    async def disconnect_from_xapi(self):
+        await self.api_connection.disconnect()
+
+    async  def close(self):
+        if self.api_client:
+           await self.disconnect_from_xapi()
+           print("Due to deletion of the HistoricalDataCollector object.")
 
     def __repr__(self):
         rep = "DataCollector(symbol = {}, start = {}, end = {}, period= {})"
