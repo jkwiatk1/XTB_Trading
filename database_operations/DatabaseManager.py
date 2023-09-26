@@ -30,6 +30,12 @@ class DatabaseManager:
         except DatabaseConnectionError as e:
             print(f"Database disconnection error: {e}")
 
+    async def ensure_connection(self):
+        cursor = await self.connector.get_cursor()
+        self.connection_status = await self.connector.get_conn_status()
+        if not cursor or not self.connection_status:
+            await self.connect_to_db()
+
     async def get_symbols(self, table_name):
         try:
             return  await self.connector.fetch_data(f"SELECT id, symbol FROM {table_name}")
@@ -41,10 +47,7 @@ class DatabaseManager:
         query_insert = f"INSERT INTO {table_name} (symbol, name) VALUES (?, ?)"
 
         try:
-            cursor = await self.connector.get_cursor()
-            self.connection_status = await self.connector.get_conn_status()
-            if not cursor or not self.connection_status:
-                await self.connect_to_db()
+            await self.ensure_connection()
 
             rows = await self.connector.fetch_data(query)
             symbols = [row['symbol'] for row in rows]
@@ -80,10 +83,7 @@ class DatabaseManager:
         query_insert = f"INSERT INTO {table_name} (stock_id, date, open, close, high, low, volume) VALUES (?, ?, ?, ?, ?, ?, ?)"
 
         try:
-            cursor = await self.connector.get_cursor()
-            self.connection_status = await self.connector.get_conn_status()
-            if not cursor or not self.connection_status:
-                await self.connect_to_db()
+            await self.ensure_connection()
 
             await self.connector.execute_query(query,params)
             count = await self.connector.fetch_one("SELECT COUNT(*) FROM stock_price_1d WHERE stock_id=?",params)
@@ -106,37 +106,51 @@ class DatabaseManager:
         finally:
             await self.disconnect_from_db()
 
-    async def get_specify_data(self, table_name: str, columns: list[str], conditions: str = "", params: Optional[tuple] = None):
+    async def get_ordered_data(self, table_name: str, columns: list[str], order_by_column: str, conditions: str = "", condition_params: Optional[tuple] = None):
         try:
-            cursor = await self.connector.get_cursor()
-            self.connection_status = await self.connector.get_conn_status()
-            if not cursor or not self.connection_status:
-                await self.connect_to_db()
+            await self.ensure_connection()
+
+            if conditions == "":
+                query = f"SELECT {', '.join(columns)} FROM {table_name} ORDER BY {order_by_column}"
+            else:
+                query = f"SELECT {', '.join(columns)} FROM {table_name} WHERE {conditions} ORDER BY {order_by_column}"
+
+            return await self.connector.fetch_data(query, condition_params)
+
+        except Exception as e:
+            error = f"Get ordered data method error: {e}"
+            print(error)
+
+    async def get_specify_data(self, table_name: str, columns: list[str], conditions: str = "", condition_params: Optional[tuple] = None):
+        try:
+            await self.ensure_connection()
 
             if conditions == "":
                 query = f"SELECT {', '.join(columns)} FROM {table_name}"
             else:
                 query = f"SELECT {', '.join(columns)} FROM {table_name} WHERE {conditions}"
 
-            return await self.connector.fetch_data(query, params)
+            return await self.connector.fetch_data(query, condition_params)
 
         except Exception as e:
             error = f"Specify data method error: {e}"
             print(error)
 
     async def get_whole_data(self, table_name: str, params_to_get = None):
-        cursor = await self.connector.get_cursor()
-        self.connection_status = await self.connector.get_conn_status()
-        if not cursor or not self.connection_status:
-            await self.connect_to_db()
+        try:
+            await self.ensure_connection()
 
-        if not params_to_get:
-            query = f"SELECT * FROM {table_name}"
-        else:
-            placeholders = ",".join(param for param in params_to_get)
-            query = f"SELECT {placeholders} FROM {table_name}"
+            if not params_to_get:
+                query = f"SELECT * FROM {table_name}"
+            else:
+                placeholders = ",".join(param for param in params_to_get)
+                query = f"SELECT {placeholders} FROM {table_name}"
 
-        return await self.connector.fetch_data(query)
+            return await self.connector.fetch_data(query)
+
+        except Exception as e:
+            error = f"Get whole data method error: {e}"
+            print(error)
 
 
 

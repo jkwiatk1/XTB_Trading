@@ -10,10 +10,9 @@
             <table class="ui selectable inverted table">
               <thead>
                 <tr>
-                    <th> </th>
+                    <th>Stock ID</th>
                   <th>Symbol</th>
                   <th>Name</th>
-                  <th class="right aligned">View</th>
                 </tr>
               </thead>
               <tbody>
@@ -21,7 +20,7 @@
                     <tr>
                         <td>{{ stock.id }}</td>
                         <td>{{ stock.symbol }}</td>
-                        <td>{{ stock.name }}</td>
+                        <td><a href = "/stock/{{ stock.symbol }}">{{ stock.name }}</a></td>
                     </tr>
                 {% endfor %}
 
