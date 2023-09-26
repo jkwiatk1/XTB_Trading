@@ -3,8 +3,29 @@
 
 ### API documentation: <http://developers.xstore.pro/documentation>
 
-### Usage:
+### Web App framework: <https://semantic-ui.com/introduction/getting-started.html>
+
+## Usage:
 You need to have xStation5 account and create `config.py` and `credentials.json` (with your own XTB credentials).
+
+#### Config.py:
+* DB_FILE = "absolute .sqlite database file"
+* CREDENTIALS_PATH = "credential path"
+* PROJECT_PATH = "absolute project path"
+
+#### Credentials.json:
+```
+{
+    "accountId": "11111111",
+    "password": "your_password",
+    "host": "ws.xtb.com",
+    "type": "demo/real",
+    "safe": false
+}
+```
+
+To run uvicorn server in cmd paste: `uvicorn web_app.app:app --reload`. To open Web App in webbrowser put: **http://localhost:8000/** 
+
 
 ## Disclaimer
 

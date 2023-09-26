@@ -1,17 +1,32 @@
 <html>
     <head>
         <title> Stonks </title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.css">
+        <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.js"></script>
     </head>
     <body>
-    <table>
-    {% for stock in stocks %}
-        <tr>
-            <td>{{ stock.id }}</td>
-            <td>{{ stock.symbol }}</td>
-            <td>{{ stock.name }}</td>
-        </tr>
-    {% endfor %}
-    </table>
+        <div class = "ui container">
+            <h1> XTB xStation5 Stock List</h1>
+            <table class="ui selectable inverted table">
+              <thead>
+                <tr>
+                    <th> </th>
+                  <th>Symbol</th>
+                  <th>Name</th>
+                  <th class="right aligned">View</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for stock in stocks %}
+                    <tr>
+                        <td>{{ stock.id }}</td>
+                        <td>{{ stock.symbol }}</td>
+                        <td>{{ stock.name }}</td>
+                    </tr>
+                {% endfor %}
 
+              </tbody>
+            </table>
+        </div>
     </body>
 </html>
