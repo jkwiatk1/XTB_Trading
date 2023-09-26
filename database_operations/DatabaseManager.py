@@ -6,7 +6,7 @@ import xapi
 from typing import Optional
 from xapi import PeriodCode
 from my_secrets import config
-from DatabaseConnector import DatabaseConnector
+from database_operations.DatabaseConnector import DatabaseConnector
 from xapi.exceptions import DatabaseConnectionError
 from scripts.DataCollector import DataCollector
 from scripts.HistoricalDataCollector import HistoricalDataCollector
