@@ -10,8 +10,15 @@ templates = Jinja2Templates(directory="templates")
 async def index(request: Request):
     database_conn = DatabaseManager(config.DB_FILE)
     await database_conn.connect_to_db()
-    existing_symbols = await database_conn.get_whole_data("stock", ("id", "symbol", "name"))
+    data = await database_conn.get_ordered_data(table_name= "stock", columns= ["id","symbol","name"] ,order_by_column ="symbol")
+
+    return templates.TemplateResponse("index.html",{"request": request, "stocks": data})
 
 
+@app.get("/stock/{symbol}")
+async def stock_detail(request: Request, symbol):
+    database_conn = DatabaseManager(config.DB_FILE)
+    await database_conn.connect_to_db()
+    row = await database_conn.get_specify_data("stock",["symbol", "name"], f"symbol = ?",(symbol,))
 
-    return templates.TemplateResponse("index.html",{"request": request, "stocks": existing_symbols})
+    return templates.TemplateResponse("stock_detail.html",{"request": request, "stock": row})
