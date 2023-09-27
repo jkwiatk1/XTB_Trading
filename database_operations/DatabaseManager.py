@@ -106,15 +106,16 @@ class DatabaseManager:
         finally:
             await self.disconnect_from_db()
 
-    async def get_ordered_data(self, table_name: str, columns: list[str], order_by_column: str, conditions: str = "", condition_params: Optional[tuple] = None):
+    async def get_ordered_data(self, table_name: str, columns: list[str], order_by_column: str, ascending: bool = True, conditions: str = "", condition_params: Optional[tuple] = None):
         try:
             await self.ensure_connection()
 
-            if conditions == "":
-                query = f"SELECT {', '.join(columns)} FROM {table_name} ORDER BY {order_by_column}"
-            else:
-                query = f"SELECT {', '.join(columns)} FROM {table_name} WHERE {conditions} ORDER BY {order_by_column}"
+            order_direction = "ASC" if ascending else "DESC"
 
+            if conditions == "":
+                query = f"SELECT {', '.join(columns)} FROM {table_name} ORDER BY {order_by_column} {order_direction}"
+            else:
+                query = f"SELECT {', '.join(columns)} FROM {table_name} WHERE {conditions} ORDER BY {order_by_column} {order_direction}"
             return await self.connector.fetch_data(query, condition_params)
 
         except Exception as e:

@@ -24,5 +24,5 @@ async def stock_detail(request: Request, symbol):
         print(stock['symbol'] + ": " + stock['name'])
         print()
 
-    prices = await database_conn.get_ordered_data("stock_price_1d",columns = ["*"], order_by_column = "date",conditions= f"stock_id = ?", condition_params =  (company[0]['id'],))
+    prices = await database_conn.get_ordered_data("stock_price_1d",columns = ["*"], order_by_column = "date",conditions= f"stock_id = ?", condition_params =  (company[0]['id'],), ascending=False)
     return templates.TemplateResponse("stock_detail.html",{"request": request, "stock": company[0], "bars": prices})
