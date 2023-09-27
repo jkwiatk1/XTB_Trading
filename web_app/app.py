@@ -11,9 +11,17 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
 async def index(request: Request):
+    stock_filter = request.query_params.get('filter', False)
+
     database_conn = DatabaseManager(config.DB_FILE)
     await database_conn.connect_to_db()
-    data = await database_conn.get_ordered_data(table_name= "stock", columns= ["id","symbol","name"] ,order_by_column ="symbol")
+
+    if stock_filter == 'new_intraday_highs':
+        query = "SELECT * FROM stock WHERE name LIKE '%Technologies%'"
+        params = None
+        data = await database_conn.execute_custom_query(query, params)
+    else:
+        data = await database_conn.get_ordered_data(table_name= "stock", columns= ["id","symbol","name"] ,order_by_column ="symbol")
 
     return templates.TemplateResponse("index.html",{"request": request, "stocks": data})
 
