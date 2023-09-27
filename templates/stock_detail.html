@@ -1,8 +1,12 @@
 {% extends "layout.html" %}
 
 {% block content %}
-    <h1>{{ stock.symbol }}</h1>
-    <h2>{{ stock.name }}</h2>
+    <h1><a href="/">Stocks</a>
+        <i class="angle double right icon"></i>
+        {{ stock.symbol }}
+        ({{ stock.name }})
+    </h1>
+    <h2>Prices</h2>
 
     <table class="ui striped table">
       <thead>

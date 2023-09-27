@@ -22,7 +22,7 @@ class DataCollector:
 
     '''
     def __init__(self, credentials_file):
-        self.cols_to_save = ['Ticker', 'Ask', 'Bid', 'Spread', 'Description', 'Ask/Bid Time']
+        self.cols_to_save = ['Ticker', 'Ask', 'Bid', 'Spread', 'Description', 'Ask/Bid Time',"Category"]
         self.data = pd.DataFrame(columns=self.cols_to_save)
 
         self.api_connection = ApiConnection(credentials_file)
@@ -46,7 +46,8 @@ class DataCollector:
                         item['bid'],
                         item['spreadRaw'],
                         item['description'],
-                        item['time']
+                        item['time'],
+                        item["categoryName"]
                     ],
                     index=self.cols_to_save
                 ),
