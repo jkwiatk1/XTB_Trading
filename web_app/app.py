@@ -19,6 +19,10 @@ async def index(request: Request):
 async def stock_detail(request: Request, symbol):
     database_conn = DatabaseManager(config.DB_FILE)
     await database_conn.connect_to_db()
-    row = await database_conn.get_specify_data("stock",["symbol", "name"], f"symbol = ?",(symbol,))
+    company = await database_conn.get_specify_data("stock",["id","symbol", "name"], f"symbol = ?",(symbol,))
+    for stock in company:
+        print(stock['symbol'] + ": " + stock['name'])
+        print()
 
-    return templates.TemplateResponse("stock_detail.html",{"request": request, "stock": row})
+    prices = await database_conn.get_ordered_data("stock_price_1d",columns = ["*"], order_by_column = "date",conditions= f"stock_id = ?", condition_params =  (company[0]['id'],))
+    return templates.TemplateResponse("stock_detail.html",{"request": request, "stock": company[0], "bars": prices})
