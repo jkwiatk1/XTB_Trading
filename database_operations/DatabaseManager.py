@@ -10,8 +10,7 @@ from database_operations.DatabaseConnector import DatabaseConnector
 from xapi.exceptions import DatabaseConnectionError
 from scripts.DataCollector import DataCollector
 from scripts.HistoricalDataCollector import HistoricalDataCollector
-
-
+from datetime import datetime, timedelta
 
 
 class DatabaseManager:
@@ -78,27 +77,36 @@ class DatabaseManager:
             await self.disconnect_from_db()
 
     async def populate_prices(self, table_name: str, stock_id, symbol, hist_data_collector: HistoricalDataCollector):
-        query = f"SELECT COUNT(*) FROM {table_name} WHERE stock_id = ?"
+        query = f"SELECT MAX(date) FROM {table_name} WHERE stock_id = ?"
         params = (stock_id,)
         query_insert = f"INSERT INTO {table_name} (stock_id, date, open, close, high, low, volume) VALUES (?, ?, ?, ?, ?, ?, ?)"
 
         try:
             await self.ensure_connection()
 
-            await self.connector.execute_query(query,params)
-            count = await self.connector.fetch_one("SELECT COUNT(*) FROM stock_price_1d WHERE stock_id=?",params)
-
-            if count[0] == 0:
+            latest_date_in_db = await self.connector.fetch_one(query, params)
+            print("DB")
+            print(latest_date_in_db[0])
+            print("Dzisiaj")
+            today = datetime.today()
+            formatted_date = today.replace(hour=0, minute=0, second=0, microsecond=0)
+            print(formatted_date)
+            if latest_date_in_db[0] == formatted_date:
+                print(f"Newest data for symbol: {symbol} already exist in the database.")
+                return
+            elif latest_date_in_db[0] is not None:
+                latest_date_in_db = datetime.strptime(latest_date_in_db[0], '%Y-%m-%d %H:%M:%S')
+                hist_data_collector.set_new_start_date(latest_date_in_db)
+                hist_data_collector.set_new_end_date(datetime.today().strftime('%Y-%m-%d'))
+                hist_data_df = await hist_data_collector.download_history_data()
+                print("Newest data downloaded")
+            else:
                 hist_data_df = await hist_data_collector.download_history_data()
 
-                for date_index, row in hist_data_df.iterrows():
-                    params_insert = (stock_id, date_index.strftime('%Y-%m-%d %H:%M:%S'), row['Open'], row['Close'], row['High'], row['Low'], row['Volume'])
-                    await self.connector.execute_query(query_insert, params_insert)
-                print(f"Data for symbol: {symbol} just added to the database.")
-
-            else:
-                print(f"Data for symbol: {symbol} already exist in the database.")
-
+            for date_index, row in hist_data_df.iterrows():
+                params_insert = (stock_id, date_index.strftime('%Y-%m-%d %H:%M:%S'), row['Open'], row['Close'], row['High'], row['Low'], row['Volume'])
+                await self.connector.execute_query(query_insert, params_insert)
+            print(f"Data for symbol: {symbol} just added to the database.")
 
         except ValueError as e:
             print(f"Error occurred: {e}")
@@ -172,59 +180,59 @@ async def main():
         data_collector = DataCollector(config.CREDENTIALS_PATH)
         await data_collector.connect_to_xapi()
 
-        await database_conn.populate_db("stock", data_collector)
+        # await database_conn.populate_db("stock", data_collector)
 
 
         '''
         Specify query
         '''
-        query = """
-            select * from(
-                    select symbol, name, stock_id, max(close), date
-                    from stock_price_1d join stock on stock.id = stock_price_1d.stock_id
-                    group by stock_id
-                    order by symbol
-            ) where date = ?
-        """
-        params = ('2020-10-29',)
-        result = await database_conn.execute_custom_query(query, params)
-        for stock in result:
-            print("SYMBOL: " + stock['symbol'] + "  NAME: " + stock['name'] + "  ID: " + str(stock['id']))
-        print("DONE\n\n")
-
-
-        query = "SELECT * FROM stock WHERE name LIKE '%Technologies%'"
-        params = None
-        result = await database_conn.execute_custom_query(query, params)
-        for stock in result:
-            print("SYMBOL: " + stock['symbol'] + "  NAME: " + stock['name'] + "  ID: " + str(stock['id']))
-        print("DONE\n\n")
-
-
-        query = "SELECT * FROM stock WHERE symbol LIKE 'B%' OR symbol LIKE 'C%'"
-        params = None
-        result = await database_conn.execute_custom_query(query, params)
-        for stock in result:
-            print("SYMBOL: " + stock['symbol'] + "  NAME: " + stock['name'] + "  ID: " + str(stock['id']))
-        print("DONE\n\n")
+        # query = """
+        #     select * from(
+        #             select symbol, name, stock_id, max(close), date
+        #             from stock_price_1d join stock on stock.id = stock_price_1d.stock_id
+        #             group by stock_id
+        #             order by symbol
+        #     ) where date = ?
+        # """
+        # params = ('2020-10-29',)
+        # result = await database_conn.execute_custom_query(query, params)
+        # for stock in result:
+        #     print("SYMBOL: " + stock['symbol'] + "  NAME: " + stock['name'] + "  ID: " + str(stock['id']))
+        # print("DONE\n\n")
+        #
+        #
+        # query = "SELECT * FROM stock WHERE name LIKE '%Technologies%'"
+        # params = None
+        # result = await database_conn.execute_custom_query(query, params)
+        # for stock in result:
+        #     print("SYMBOL: " + stock['symbol'] + "  NAME: " + stock['name'] + "  ID: " + str(stock['id']))
+        # print("DONE\n\n")
+        #
+        #
+        # query = "SELECT * FROM stock WHERE symbol LIKE 'B%' OR symbol LIKE 'C%'"
+        # params = None
+        # result = await database_conn.execute_custom_query(query, params)
+        # for stock in result:
+        #     print("SYMBOL: " + stock['symbol'] + "  NAME: " + stock['name'] + "  ID: " + str(stock['id']))
+        # print("DONE\n\n")
 
 
         '''
         Specify symbol
         '''
-        # symbol = "EURUSD"
-        # symbol_id  = await database_conn.get_specify_data("stock",["id"], f"symbol = ?",(symbol,))
-        # symbol_id = symbol_id[0][0]
-        #
-        # hist_data_collector = HistoricalDataCollector(
-        #     symbol= symbol,
-        #     start='2000-01-01',
-        #     end='2023-08-01',
-        #     period=PeriodCode.PERIOD_D1,
-        #     credentials_file=config.CREDENTIALS_PATH
-        # )
-        # await hist_data_collector.connect_to_xapi()
-        # await database_conn.populate_prices("stock_price_1d", symbol_id, symbol, hist_data_collector)
+        symbol = "EURUSD"
+        symbol_id  = await database_conn.get_specify_data("stock",["id"], f"symbol = ?",(symbol,))
+        symbol_id = symbol_id[0][0]
+
+        hist_data_collector = HistoricalDataCollector(
+            symbol= symbol,
+            start='2000-01-01',
+            end='2023-08-01',
+            period=PeriodCode.PERIOD_D1,
+            credentials_file=config.CREDENTIALS_PATH
+        )
+        await hist_data_collector.connect_to_xapi()
+        await database_conn.populate_prices("stock_price_1d", symbol_id, symbol, hist_data_collector)
 
 
         '''
