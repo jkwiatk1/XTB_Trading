@@ -116,6 +116,23 @@ class HistoricalDataCollector:
                 self.start = date_start.strftime('%Y-%m-%d')
                 print(f"Start date is set to {self.start}")
 
+    def set_new_start_date(self, new_start_date):
+        self.start = new_start_date.strftime('%Y-%m-%d')
+
+    def set_new_end_date(self, new_end_date):
+        if isinstance(new_end_date, datetime):
+            self.end = new_end_date.strftime('%Y-%m-%d')
+        elif isinstance(new_end_date, str):
+            self.end = datetime.strptime(new_end_date, '%Y-%m-%d').strftime('%Y-%m-%d')
+        else:
+            raise ValueError("Invalid date format")
+
+    def get_start_date(self):
+        return self.start
+
+    def get_end_date(self):
+        return self.end
+
     def get_column_names(self):
         return self.cols_to_save
 
