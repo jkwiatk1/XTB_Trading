@@ -6,6 +6,13 @@
         {{ stock.symbol }}
         ({{ stock.name }})
     </h1>
+
+    <form method="post" action="/stock/{{ stock.symbol }}/download">
+        <input type="hidden" name="symbol" value="{{ stock.symbol }}" />
+        <input type="hidden" name="symbol_id" value="{{ stock.id }}" />
+        <input type="submit" value="Download Newest Data" />
+    </form>
+
     <h2>Prices</h2>
 
     <table class="ui striped table">
