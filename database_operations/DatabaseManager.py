@@ -85,13 +85,14 @@ class DatabaseManager:
             await self.ensure_connection()
 
             latest_date_in_db = await self.connector.fetch_one(query, params)
-            print("DB")
+            print("Last date in the database")
             print(latest_date_in_db[0])
-            print("Dzisiaj")
-            today = datetime.today()
-            formatted_date = today.replace(hour=0, minute=0, second=0, microsecond=0)
-            print(formatted_date)
-            if latest_date_in_db[0] == formatted_date:
+            print("Today's date")
+            formatted_date_today_str = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0).strftime(
+                '%Y-%m-%d %H:%M:%S')
+
+            print(formatted_date_today_str)
+            if latest_date_in_db[0] == formatted_date_today_str:
                 print(f"Newest data for symbol: {symbol} already exist in the database.")
                 return
             elif latest_date_in_db[0] is not None:
