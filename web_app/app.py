@@ -82,5 +82,5 @@ async def download_newest_data(request: Request, symbol: str, symbol_id: int = F
 
     prices = await database_conn.get_ordered_data("stock_price_1d",columns = ["*"], order_by_column = "date",conditions= f"stock_id = ?", condition_params =  (company[0]['id'],), ascending=False)
 
-
+    # return RedirectResponse(url=f"/stock/{symbol}", status_code=303)  from fastapi.responses import RedirectResponse
     return templates.TemplateResponse("stock_detail.html", {"request": request, "stock": company[0], "bars": prices})
