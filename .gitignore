@@ -2,6 +2,7 @@
 build
 dist
 idea
+notes.txt
 my_secrets/credentials.json
 my_secrets/config.py
 __pycache__
