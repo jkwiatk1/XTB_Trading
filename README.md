@@ -26,6 +26,15 @@ You need to have xStation5 account and create `config.py` and `credentials.json`
 
 To run uvicorn server in cmd paste: `uvicorn web_app.app:app --reload`. To open Web App in webbrowser put: **http://localhost:8000/** 
 
+## Web application design 
+### Main page:
+![Web app main](docs/images/web_app_view.JPG)
+
+
+### Example stock page:
+![Web app stock](docs/images/web_app_view_stock.JPG)
+
+
 
 ## Disclaimer
 
