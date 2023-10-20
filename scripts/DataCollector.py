@@ -36,23 +36,18 @@ class DataCollector:
 
     async def download_real_data(self):
         response = await self.api_client.socket.getAllSymbols()
-        self.data.drop(index=self.data.index, inplace=True)
+        # self.data.drop(index=self.data.index, inplace=True)
+        self.data = self.data.iloc[0:0]
         for item in response['returnData']:
-            self.data = self.data.append(
-                pd.Series(
-                    [
-                        item['symbol'],
-                        item['ask'],
-                        item['bid'],
-                        item['spreadRaw'],
-                        item['description'],
-                        item['time'],
-                        item["categoryName"]
-                    ],
-                    index=self.cols_to_save
-                ),
-                ignore_index=True
-            )
+            self.data = pd.concat([self.data, pd.Series([
+                item['symbol'],
+                item['ask'],
+                item['bid'],
+                item['spreadRaw'],
+                item['description'],
+                item['time'],
+                item["categoryName"]
+            ], index=self.cols_to_save)], ignore_index=True)
         return self.data
 
     def save_to_csv(self, filename='../docs/data.csv'):
@@ -102,7 +97,7 @@ async def main():
         await data_collector.connect_to_xapi()
         await data_collector.download_real_data()
         df = data_collector.get_data_df()
-        data_collector.save_to_csv()
+        # data_collector.save_to_csv()
         print(df)
         print()
         print(data_collector.get_symbol_strings())
