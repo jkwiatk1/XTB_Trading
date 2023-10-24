@@ -49,21 +49,35 @@ async def index(request: Request):
         #     await download_yesterday_data(stock_symbol,stock_id)
 
         query = """ 
-            SELECT s.*, MAX(((sp.close - sp.open) / sp.open) * 100) AS max_percent_change
+            SELECT s.*, ((sp.close - sp.open) / sp.open) * 100 AS max_percent_change
             FROM stock AS s
             JOIN stock_price_1d AS sp ON s.id = sp.stock_id
-            WHERE sp.date = (SELECT MAX(date) FROM stock_price_1d)
+            WHERE sp.date = (
+                SELECT date
+                FROM stock_price_1d
+                WHERE date < (SELECT MAX(date) FROM stock_price_1d)
+                ORDER BY date DESC
+                LIMIT 1
+            )
             GROUP BY s.symbol
             ORDER BY max_percent_change DESC;
         """
         params = None
         data = await database_conn.execute_custom_query(query, params)
     elif stock_filter == 'yesterday_open_close_growth_diff':
-        query = """ SELECT s.*,  MAX(((sp.close - sp.open) / sp.open) * 100) AS price_difference
-        FROM stock AS s
-        JOIN stock_price_1d AS sp ON s.id = sp.stock_id
-        GROUP BY s.symbol
-        ORDER BY price_difference DESC;
+        query = """ 
+            SELECT s.*, ((sp.close - sp.open) / sp.open) * 100 AS max_percent_change
+            FROM stock AS s
+            JOIN stock_price_1d AS sp ON s.id = sp.stock_id
+            WHERE sp.date = (
+                SELECT date
+                FROM stock_price_1d
+                WHERE date < (SELECT MAX(date) FROM stock_price_1d)
+                ORDER BY date DESC
+                LIMIT 1
+            )
+            GROUP BY s.symbol
+            ORDER BY max_percent_change ASC;
         """
         params = None
         data = await database_conn.execute_custom_query(query, params)
