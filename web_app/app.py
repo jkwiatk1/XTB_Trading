@@ -43,13 +43,14 @@ async def index(request: Request):
     await database_conn.connect_to_db()
 
     if stock_filter == 'yesterday_open_close_drop_diff':
+        custom_column_header = "Max Percent Change - Growth"
 
         # stocks_id_symbol = await database_conn.get_whole_data(table_name="stock", params_to_get=["id", "symbol"])
         # for stock_id, stock_symbol in stocks_id_symbol:
         #     await download_yesterday_data(stock_symbol,stock_id)
 
         query = """ 
-            SELECT s.*, ((sp.close - sp.open) / sp.open) * 100 AS max_percent_change
+            SELECT s.*, ROUND(((sp.close - sp.open) / sp.open) * 100, 2) AS max_percent_change
             FROM stock AS s
             JOIN stock_price_1d AS sp ON s.id = sp.stock_id
             WHERE sp.date = (
@@ -65,8 +66,10 @@ async def index(request: Request):
         params = None
         data = await database_conn.execute_custom_query(query, params)
     elif stock_filter == 'yesterday_open_close_growth_diff':
+        custom_column_header = "Max Percent Change - Decline"
+
         query = """ 
-            SELECT s.*, ((sp.close - sp.open) / sp.open) * 100 AS max_percent_change
+            SELECT s.*, ROUND(((sp.close - sp.open) / sp.open) * 100, 2) AS max_percent_change
             FROM stock AS s
             JOIN stock_price_1d AS sp ON s.id = sp.stock_id
             WHERE sp.date = (
@@ -83,10 +86,14 @@ async def index(request: Request):
         data = await database_conn.execute_custom_query(query, params)
 
     else:
+        custom_column_header = ""
+
         data = await database_conn.get_ordered_data(table_name="stock", columns=["id", "symbol", "name"],
                                                     order_by_column="symbol")
 
-    return templates.TemplateResponse("index.html", {"request": request, "stocks": data})
+    return templates.TemplateResponse("index.html", {"request": request, "stocks": data,
+                                                     "custom_column_header": custom_column_header})
+
 
 
 @app.get("/stock/{symbol}")
